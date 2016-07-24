@@ -27,6 +27,7 @@ var (
 	// ErrRootFSReadOnly is returned when a container
 	// rootfs is marked readonly.
 	ErrRootFSReadOnly = errors.New("container rootfs is marked read-only")
+	getPortMapInfo    = container.GetSandboxPortMapInfo
 )
 
 func (daemon *Daemon) buildSandboxOptions(container *container.Container, n libnetwork.Network) ([]libnetwork.SandboxOption, error) {
@@ -47,8 +48,14 @@ func (daemon *Daemon) buildSandboxOptions(container *container.Container, n libn
 
 	if container.HostConfig.NetworkMode.IsHost() {
 		sboxOptions = append(sboxOptions, libnetwork.OptionUseDefaultSandbox())
-		sboxOptions = append(sboxOptions, libnetwork.OptionOriginHostsPath("/etc/hosts"))
-		sboxOptions = append(sboxOptions, libnetwork.OptionOriginResolvConfPath("/etc/resolv.conf"))
+		if len(container.HostConfig.ExtraHosts) == 0 {
+			sboxOptions = append(sboxOptions, libnetwork.OptionOriginHostsPath("/etc/hosts"))
+		}
+		if len(container.HostConfig.DNS) == 0 && len(daemon.configStore.DNS) == 0 &&
+			len(container.HostConfig.DNSSearch) == 0 && len(daemon.configStore.DNSSearch) == 0 &&
+			len(container.HostConfig.DNSOptions) == 0 && len(daemon.configStore.DNSOptions) == 0 {
+			sboxOptions = append(sboxOptions, libnetwork.OptionOriginResolvConfPath("/etc/resolv.conf"))
+		}
 	} else {
 		// OptionUseExternalKey is mandatory for userns support.
 		// But optional for non-userns support
@@ -581,6 +588,8 @@ func (daemon *Daemon) connectToNetwork(container *container.Container, idOrName 
 		return fmt.Errorf("Updating join info failed: %v", err)
 	}
 
+	container.NetworkSettings.Ports = getPortMapInfo(sb)
+
 	daemon.LogNetworkEventWithAttributes(n, "connect", map[string]string{"container": container.ID})
 	return nil
 }
@@ -632,6 +641,8 @@ func disconnectFromNetwork(container *container.Container, n libnetwork.Network,
 	if err := ep.Leave(sbox); err != nil {
 		return fmt.Errorf("container %s failed to leave network %s: %v", container.ID, n.Name(), err)
 	}
+
+	container.NetworkSettings.Ports = getPortMapInfo(sbox)
 
 	if err := ep.Delete(false); err != nil {
 		return fmt.Errorf("endpoint delete failed for container %s on network %s: %v", container.ID, n.Name(), err)

@@ -382,11 +382,14 @@ name, they must be linked.
 With the network set to `host` a container will share the host's
 network stack and all interfaces from the host will be available to the
 container.  The container's hostname will match the hostname on the host
-system.  Note that `--add-host` `--dns` `--dns-search`
-`--dns-opt` and `--mac-address` are invalid in `host` netmode. Even in `host`
+system. Note that `--mac-address` is invalid in `host` netmode. Even in `host`
 network mode a container has its own UTS namespace by default. As such
 `--hostname` is allowed in `host` network mode and will only change the
 hostname inside the container.
+Similar to `--hostname`, the `--add-host`, `--dns`, `--dns-search`, and
+`--dns-opt` options can be used in `host` network mode. These options update
+`/etc/hosts` or `/etc/resolv.conf` inside the container. No change are made to
+`/etc/hosts` and `/etc/resolv.conf` on the host.
 
 Compared to the default `bridge` mode, the `host` mode gives *significantly*
 better networking performance since it uses the host's native networking stack
@@ -1445,7 +1448,7 @@ The `host-src` can either be an absolute path or a `name` value. If you
 supply an absolute path for the `host-dir`, Docker bind-mounts to the path
 you specify. If you supply a `name`, Docker creates a named volume by that `name`.
 
-A `name` value must start with start with an alphanumeric character,
+A `name` value must start with an alphanumeric character,
 followed by `a-z0-9`, `_` (underscore), `.` (period) or `-` (hyphen).
 An absolute path starts with a `/` (forward slash).
 

@@ -527,8 +527,9 @@ can specify default container isolation technology with this, for example:
 
     $ dockerd --exec-opt isolation=hyperv
 
-Will make `hyperv` the default isolation technology on Windows, without specifying
-isolation value on daemon start, Windows isolation technology will default to `process`.
+Will make `hyperv` the default isolation technology on Windows. If no isolation
+value is specified on daemon start, on Windows client, the default is
+`hyperv`, and on Windows server, the default is `process`. 
 
 ## Daemon DNS options
 
@@ -938,7 +939,7 @@ This is a full example of the allowed configuration options in the file:
 	"tlscacert": "",
 	"tlscert": "",
 	"tlskey": "",
-	"api-cors-headers": "",
+	"api-cors-header": "",
 	"selinux-enabled": false,
 	"userns-remap": "",
 	"group": "",
@@ -947,7 +948,7 @@ This is a full example of the allowed configuration options in the file:
 	"ipv6": false,
 	"iptables": false,
 	"ip-forward": false,
-	"ip-mask": false,
+	"ip-masq": false,
 	"userland-proxy": false,
 	"ip": "0.0.0.0",
 	"bridge": "",

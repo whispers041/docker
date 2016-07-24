@@ -484,7 +484,9 @@ func copyEscapable(dst io.Writer, src io.ReadCloser, keys []byte) (written int64
 		nr, er := src.Read(buf)
 		if nr > 0 {
 			// ---- Docker addition
+			preservBuf := []byte{}
 			for i, key := range keys {
+				preservBuf = append(preservBuf, buf[0:nr]...)
 				if nr != 1 || buf[0] != key {
 					break
 				}
@@ -496,8 +498,15 @@ func copyEscapable(dst io.Writer, src io.ReadCloser, keys []byte) (written int64
 				}
 				nr, er = src.Read(buf)
 			}
-			// ---- End of docker
-			nw, ew := dst.Write(buf[0:nr])
+			var nw int
+			var ew error
+			if len(preservBuf) > 0 {
+				nw, ew = dst.Write(preservBuf)
+				nr = len(preservBuf)
+			} else {
+				// ---- End of docker
+				nw, ew = dst.Write(buf[0:nr])
+			}
 			if nw > 0 {
 				written += int64(nw)
 			}
@@ -651,7 +660,8 @@ func getEndpointPortMapInfo(ep libnetwork.Endpoint) (nat.PortMap, error) {
 	return pm, nil
 }
 
-func getSandboxPortMapInfo(sb libnetwork.Sandbox) nat.PortMap {
+// GetSandboxPortMapInfo retrieves the current port-mapping programmed for the given sandbox
+func GetSandboxPortMapInfo(sb libnetwork.Sandbox) nat.PortMap {
 	pm := nat.PortMap{}
 	if sb == nil {
 		return pm
@@ -808,7 +818,7 @@ func (container *Container) BuildCreateEndpointOptions(n libnetwork.Network, epC
 	}
 
 	// Port-mapping rules belong to the container & applicable only to non-internal networks
-	portmaps := getSandboxPortMapInfo(sb)
+	portmaps := GetSandboxPortMapInfo(sb)
 	if n.Info().Internal() || len(portmaps) > 0 {
 		return createOptions, nil
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/layer"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/stringid"
+	"github.com/docker/docker/runconfig"
 	volumestore "github.com/docker/docker/volume/store"
 	"github.com/docker/engine-api/types"
 	containertypes "github.com/docker/engine-api/types/container"
@@ -122,6 +123,9 @@ func (daemon *Daemon) create(params types.ContainerCreateConfig) (retC *containe
 	if params.NetworkingConfig != nil {
 		endpointsConfigs = params.NetworkingConfig.EndpointsConfig
 	}
+	// Make sure NetworkMode has an acceptable value. We do this to ensure
+	// backwards API compatibility.
+	container.HostConfig = runconfig.SetDefaultNetModeIfBlank(container.HostConfig)
 
 	if err := daemon.updateContainerNetworkSettings(container, endpointsConfigs); err != nil {
 		return nil, err
@@ -217,4 +221,16 @@ func (daemon *Daemon) VolumeCreate(name, driverName string, opts, labels map[str
 	apiV := volumeToAPIType(v)
 	apiV.Mountpoint = v.Path()
 	return apiV, nil
+}
+
+func (daemon *Daemon) mergeAndVerifyConfig(config *containertypes.Config, img *image.Image) error {
+	if img != nil && img.Config != nil {
+		if err := merge(config, img.Config); err != nil {
+			return err
+		}
+	}
+	if len(config.Entrypoint) == 0 && len(config.Cmd) == 0 {
+		return fmt.Errorf("No command specified")
+	}
+	return nil
 }

@@ -1,13 +1,49 @@
 #!/usr/bin/env bash
 set -e
 
+# this script is used to update vendored dependencies
+#
+# Usage:
+# vendor.sh revendor all dependencies
+# vendor.sh github.com/docker/engine-api revendor only the engine-api dependency.
+# vendor.sh github.com/docker/engine-api v0.3.3 vendor only engine-api at the specified tag/commit.
+# vendor.sh git github.com/docker/engine-api v0.3.3 is the same but specifies the VCS for cases where the VCS is something else than git
+# vendor.sh git golang.org/x/sys eb2c74142fd19a79b3f237334c7384d5167b1b46 https://github.com/golang/sys.git vendor only golang.org/x/sys downloading from the specified URL
+
 cd "$(dirname "$BASH_SOURCE")/.."
-rm -rf vendor/
 source 'hack/.vendor-helpers.sh'
+
+case $# in
+0)
+	rm -rf vendor/
+	;;
+# If user passed arguments to the script
+1)
+	eval "$(grep -E "^clone [^ ]+ $1" "$0")"
+	clean
+	exit 0
+	;;
+2)
+	rm -rf "vendor/src/$1"
+	clone git "$1" "$2"
+	clean
+	exit 0
+	;;
+[34])
+	rm -rf "vendor/src/$2"
+	clone "$@"
+	clean
+	exit 0
+	;;
+*)
+	>&2 echo "error: unexpected parameters"
+	exit 1
+	;;
+esac
 
 # the following lines are in sorted order, FYI
 clone git github.com/Azure/go-ansiterm 388960b655244e76e24c75f48631564eaefade62
-clone git github.com/Microsoft/hcsshim v0.2.2
+clone git github.com/Microsoft/hcsshim v0.3.0
 clone git github.com/Microsoft/go-winio v0.3.4
 clone git github.com/Sirupsen/logrus v0.10.0 # logrus is a common dependency among multiple deps
 clone git github.com/docker/libtrust 9cbd2a1374f46905c68a4eb3694a130610adc62a
@@ -24,7 +60,7 @@ clone git golang.org/x/net 78cb2c067747f08b343f20614155233ab4ea2ad3 https://gith
 clone git golang.org/x/sys eb2c74142fd19a79b3f237334c7384d5167b1b46 https://github.com/golang/sys.git
 clone git github.com/docker/go-units 651fc226e7441360384da338d0fd37f2440ffbe3
 clone git github.com/docker/go-connections v0.2.0
-clone git github.com/docker/engine-api e374c4fb5b121a8fd4295ec5eb91a8068c6304f4
+clone git github.com/docker/engine-api 12fbeb3ac3ca5dc5d0f01d6bac9bda518d46d983
 clone git github.com/RackSec/srslog 259aed10dfa74ea2961eddd1d9847619f6e98837
 clone git github.com/imdario/mergo 0.2.1
 
